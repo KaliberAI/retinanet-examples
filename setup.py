@@ -18,7 +18,8 @@ setup(
                 '-gencode=arch=compute_75,code=sm_75', '-gencode=arch=compute_75,code=compute_75'
             ],
         },
-        libraries=['nvinfer', 'nvinfer_plugin', 'nvonnxparser'])
+        libraries=['nvinfer', 'nvinfer_plugin', 'nvonnxparser', 'opencv_core', 'opencv_highgui', 'opencv_imgproc', 'opencv_imgcodecs'],
+        library_dirs=['/usr/lib/aarch64-linux-gnu/'])
     ],
     cmdclass={'build_ext': BuildExtension.with_options(no_python_abi_suffix=True)},
     install_requires=[

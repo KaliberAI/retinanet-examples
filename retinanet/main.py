@@ -7,7 +7,7 @@ import torch.cuda
 import torch.distributed
 import torch.multiprocessing
 
-from retinanet import infer, train, utils
+from retinanet import utils
 from retinanet.model import Model
 from retinanet._C import Engine
 
@@ -159,7 +159,7 @@ def worker(rank, args, world, model, state):
         })
 
         torch.cuda.set_device(rank)
-        torch.distributed.init_process_group(backend='nccl', init_method='env://')
+        torch.distributed.init_process_group(backend='gloo', init_method='env://')
 
         if args.batch % world != 0:
             raise RuntimeError('Batch size should be a multiple of the number of GPUs')
