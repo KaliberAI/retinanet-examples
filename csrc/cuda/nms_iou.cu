@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "cuda.h"
 #include "nms_iou.h"
 #include "utils.h"
 
@@ -35,8 +36,16 @@
 #include <thrust/execution_policy.h>
 #include <thrust/gather.h>
 #include <thrust/sequence.h>
+
+#if CUDA_VERSION >= 11000
+#include <cub/device/device_radix_sort.cuh>
+#include <cub/iterator/counting_input_iterator.cuh>
+namespace cub_namespace = cub;
+#else
 #include <thrust/system/cuda/detail/cub/device/device_radix_sort.cuh>
 #include <thrust/system/cuda/detail/cub/iterator/counting_input_iterator.cuh>
+namespace cub_namespace = thrust::cuda_cub::cub;
+#endif
 
 constexpr int   kTPB     = 64;  // threads per block
 constexpr int   kCorners = 4;
@@ -267,15 +276,15 @@ int nms_rotate(int batch_size, const void *const *inputs, void **outputs, size_t
     workspace_size += get_size_aligned<float>( count );  // scores
     workspace_size += get_size_aligned<float>( count );  // scores_sorted
     size_t temp_size_flag = 0;
-    thrust::cuda_cub::cub::DeviceSelect::Flagged(( void * )nullptr,
+    cub_namespace::DeviceSelect::Flagged(( void * )nullptr,
                                                 temp_size_flag,
-                                                thrust::cuda_cub::cub::CountingInputIterator<int>( count ),
+                                                cub_namespace::CountingInputIterator<int>( count ),
                                                 ( bool * )nullptr,
                                                 ( int * )nullptr,
                                                 ( int * )nullptr,
                                                 count );
     size_t temp_size_sort = 0;
-    thrust::cuda_cub::cub::DeviceRadixSort::SortPairsDescending(( void * )nullptr,
+    cub_namespace::DeviceRadixSort::SortPairsDescending(( void * )nullptr,
                                                                 temp_size_sort,
                                                                 ( float * )nullptr,
                                                                 ( float * )nullptr,
@@ -302,9 +311,9 @@ int nms_rotate(int batch_size, const void *const *inputs, void **outputs, size_t
     // Discard null scores
     thrust::transform( on_stream, in_scores, in_scores + count, flags, thrust::placeholders::_1 > 0.0f );
     int *num_selected = reinterpret_cast<int *>( indices_sorted );
-    thrust::cuda_cub::cub::DeviceSelect::Flagged(workspace,
+    cub_namespace::DeviceSelect::Flagged(workspace,
                                                 workspace_size,
-                                                thrust::cuda_cub::cub::CountingInputIterator<int>( 0 ),
+                                                cub_namespace::CountingInputIterator<int>( 0 ),
                                                 flags,
                                                 indices,
                                                 num_selected,
@@ -314,7 +323,7 @@ int nms_rotate(int batch_size, const void *const *inputs, void **outputs, size_t
     int num_detections = *thrust::device_pointer_cast( num_selected );
     // Sort scores and corresponding indices
     thrust::gather( on_stream, indices, indices + num_detections, in_scores, scores );
-    thrust::cuda_cub::cub::DeviceRadixSort::SortPairsDescending(workspace,
+    cub_namespace::DeviceRadixSort::SortPairsDescending(workspace,
                                                                 workspace_size,
                                                                 scores,
                                                                 scores_sorted,
@@ -330,7 +339,7 @@ int nms_rotate(int batch_size, const void *const *inputs, void **outputs, size_t
     nms_rotate_kernel<<<1, max_threads, 0, stream>>>(
         num_per_thread, nms_thresh, num_detections, indices_sorted, scores_sorted, in_classes, in_boxes );
     // Re-sort with updated scores
-    thrust::cuda_cub::cub::DeviceRadixSort::SortPairsDescending(workspace,
+    cub_namespace::DeviceRadixSort::SortPairsDescending(workspace,
                                                                 workspace_size,
                                                                 scores_sorted,
                                                                 scores,
