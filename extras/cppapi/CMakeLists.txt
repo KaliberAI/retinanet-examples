@@ -38,7 +38,7 @@ target_link_libraries(export PRIVATE retinanet ${OpenCV_LIBS})
 
 add_executable(infer infer.cpp)
 include_directories(${OpenCV_INCLUDE_DIRS})
-target_link_libraries(infer PRIVATE retinanet ${OpenCV_LIBS} cuda ${CUDA_LIBRARIES})
+target_link_libraries(infer PRIVATE retinanet ${OpenCV_LIBS} /usr/local/cuda/lib64/libcudart.so ${CUDA_LIBRARIES})
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
   add_executable(infervideo infervideo.cpp)
