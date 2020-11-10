@@ -163,3 +163,48 @@ If you wish to deploy your model to a Jetson device (eg - Jetson AGX Xavier) run
 - [Deep Residual Learning for Image Recognition](http://arxiv.org/abs/1512.03385).
   Kaiming He, Xiangyu Zhang, Shaoqing Renm Jian Sun.
   CVPR, 2016.
+  
+  
+ ----------------------------
+ 
+## Building ODTK on x86 Ubuntu 18.04 + CUDA 11 + TensorRT 7.2.1
+
+
+Clone retinanet-examples fork with mccoy patch:
+```
+$ git clone --branch mr-mccoy-cuda11 git@github.com:KaliberAI/retinanet-examples
+```
+
+PyCUDA will need to be built by pip, make sure CUDA can be found:
+```
+$ export CUDA_HOME=/usr/local/cuda \
+export CUDA_ROOT=/usr/local/cuda \
+export PATH=$PATH:/usr/local/cuda/bin \
+export CUDA_INC_DIR=/usr/local/cuda:/usr/local/cuda/include \
+export CUDACXX="/usr/local/cuda/bin/nvcc" \
+```
+
+Create a virutal env using python3.6
+```
+$ pew new odtk --python=python3.6
+```
+
+Install odtk dependencies:
+```
+$ pip3 install -r requirements.txt
+```
+
+Build the odtk wheel
+```
+$ python3 setup.py bdist_wheel
+```
+
+Install the built wheel
+```
+$ pip3 install dist/odtk-0.2.4-cp36-cp36m-linux_x86_64.whl
+```
+
+Export a model. If you get a bus error or seg fault, try rebooting your machine. 
+```
+odtk export stage1-new-retinanet.pth stage1-new-retinanet.plan --size 640 640
+```
